@@ -65,7 +65,6 @@ public class MatchingEngineController {
         else if(stockOrder.getTradeType().equals(TradeType.sell)){
             trades= matchingStrategy.matchSellStock(stockOrder);
         }
-        System.out.println("trades:"+ trades);
         return trades;
     }
 }

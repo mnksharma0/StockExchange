@@ -39,6 +39,8 @@ public class MatchingEngineUtils {
 
 
             Timestamp expiryTime = new Timestamp(System.currentTimeMillis());
+            expiryTime.setHours(15);
+            expiryTime.setMinutes(30);
 
             stockOrder  = new Order(orderId, timestamp, stockCode, orderType, tradeType, quantity, price, status, expiryTime);
 

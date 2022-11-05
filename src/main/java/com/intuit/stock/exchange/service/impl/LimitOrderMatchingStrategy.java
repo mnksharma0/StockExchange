@@ -3,6 +3,7 @@ package com.intuit.stock.exchange.service.impl;
 import com.intuit.stock.exchange.model.Order;
 import com.intuit.stock.exchange.model.OrderBook;
 import com.intuit.stock.exchange.model.Trade;
+import com.intuit.stock.exchange.model.TradeType;
 import com.intuit.stock.exchange.service.IMatchingStrategy;
 
 import java.sql.Timestamp;
@@ -54,10 +55,10 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
 
         if(stockOrderBooks.get(buyOrder.getStockCode())!=null){
             if(sellOrder.getQuantity()==0){
-                stockOrderBooks.get(buyOrder.getStockCode()).getSellOrders().remove(sellOrder);
+                getStockSellOrders(buyOrder.getStockCode()).remove(sellOrder);
             }
             if(buyOrder.getQuantity()==0){
-                stockOrderBooks.get(buyOrder.getStockCode()).getBuyOrders().remove(buyOrder);
+                getStockBuyOrders(buyOrder.getStockCode()).remove(buyOrder);
             }
         }
     }
@@ -74,7 +75,7 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
 
         boolean sellOrdersPresent = false;
 
-        if(stockOrderBooks.containsKey(stockCode) && !stockOrderBooks.get(stockCode).getSellOrders().isEmpty()){
+        if(stockOrderBooks.containsKey(stockCode) && !getStockSellOrders(stockCode).isEmpty()){
             sellOrdersPresent = true;
         }
         return sellOrdersPresent;
@@ -84,7 +85,7 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
 
         boolean buyOrdersPresent = false;
 
-        if(stockOrderBooks.containsKey(stockCode) && !stockOrderBooks.get(stockCode).getBuyOrders().isEmpty()){
+        if(stockOrderBooks.containsKey(stockCode) && !getStockBuyOrders(stockCode).isEmpty()){
             buyOrdersPresent = true;
         }
         return buyOrdersPresent;
@@ -98,6 +99,19 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
         return stockOrderBooks.get(stockCode).getBuyOrders();
     }
 
+    private boolean isOrderExpired(Order order){
+        return order.getExpiryTime().after(new Timestamp(System.currentTimeMillis()));
+    }
+
+    private void handleExpiredOrder(Order order){
+        if(order.getTradeType().equals(TradeType.buy)){
+            getStockBuyOrders(order.getStockCode()).remove(order);
+        }
+        else if(order.getTradeType().equals(TradeType.sell)){
+            getStockSellOrders(order.getStockCode()).remove(order);
+        }
+    }
+
     @Override
     public List<Trade> matchBuyStock(Order buyOrder) {
         System.out.println("Processing buy buyOrder: "+buyOrder);
@@ -107,10 +121,15 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
 
         if(isStockHasSellOrdersPresent(stockCode)){
             Order sellOrder = getStockSellOrders(stockCode).peek();
-            while(isStockHasSellOrdersPresent(stockCode) && sellOrder.getPrice()<= buyOrder.getPrice() && buyOrder.getQuantity() >0){
-                Trade trade = createTradeAndUpdateOrderBook(buyOrder,sellOrder);
-                trades.add(trade);
-                sellOrder = getStockSellOrders(stockCode).peek();
+             while(isStockHasSellOrdersPresent(stockCode) && sellOrder.getPrice()<= buyOrder.getPrice() && buyOrder.getQuantity() >0){
+               if(!isOrderExpired(sellOrder)){
+                   Trade trade = createTradeAndUpdateOrderBook(buyOrder,sellOrder);
+                   trades.add(trade);
+               }
+               else{
+                   handleExpiredOrder(sellOrder);
+               }
+                 sellOrder = getStockSellOrders(stockCode).peek();
             }
         }
 
@@ -136,9 +155,14 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
         if(isStockHasBuyOrdersPresent(stockCode)){
             Order buyOrder = getStockBuyOrders(stockCode).peek();
             while(isStockHasBuyOrdersPresent(stockCode) && buyOrder.getPrice() >= sellOrder.getPrice() && sellOrder.getQuantity() > 0) {
+                if(!isOrderExpired(buyOrder)){
+                    Trade trade = createTradeAndUpdateOrderBook(buyOrder,sellOrder);
+                    trades.add(trade);
+                }
+                else{
+                    handleExpiredOrder(buyOrder);
+                }
                 buyOrder = getStockBuyOrders(stockCode).peek();
-                Trade trade= createTradeAndUpdateOrderBook(buyOrder,sellOrder);
-                trades.add(trade);
             }
         }
         if(sellOrder.getQuantity()!=0){
