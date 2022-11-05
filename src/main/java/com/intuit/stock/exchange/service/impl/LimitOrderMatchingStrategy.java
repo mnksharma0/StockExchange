@@ -3,28 +3,33 @@ package com.intuit.stock.exchange.service.impl;
 import com.intuit.stock.exchange.model.Order;
 import com.intuit.stock.exchange.model.OrderBook;
 import com.intuit.stock.exchange.model.Trade;
-import com.intuit.stock.exchange.service.MatchingEngineService;
+import com.intuit.stock.exchange.service.IMatchingStrategy;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * @author monikas
  */
-public class MatchingEngineServiceImpl implements MatchingEngineService {
+public class LimitOrderMatchingStrategy implements IMatchingStrategy {
 
-    private static Hashtable<String, OrderBook> stockOrderBooks= new Hashtable<>();
+    private final Hashtable<String, OrderBook> stockOrderBooks;
+
+    public LimitOrderMatchingStrategy() {
+        stockOrderBooks= new Hashtable<>();
+    }
 
     private Trade createTradeAndUpdateOrderBook(Order buyOrder, Order sellOrder){
 
-        float quantity= buyOrder.getQuantity();
+        double quantity= buyOrder.getQuantity();
+
         if(buyOrder.getQuantity()==sellOrder.getQuantity()){
             buyOrder.setQuantity(0);
             sellOrder.setQuantity(0);
-        }
-        else if(buyOrder.getQuantity()>sellOrder.getQuantity()){
+        } else if(buyOrder.getQuantity()>sellOrder.getQuantity()){
             buyOrder.setQuantity(buyOrder.getQuantity() - sellOrder.getQuantity());
             sellOrder.setQuantity(0);
         }
@@ -35,6 +40,18 @@ public class MatchingEngineServiceImpl implements MatchingEngineService {
 
         quantity= buyOrder.getQuantity()==0? quantity: quantity-buyOrder.getQuantity();
 
+        removeOrderFromStockBook(buyOrder, sellOrder);
+
+        Trade trade= new Trade(sellOrder.getOrderId(), quantity, sellOrder.getPrice(), buyOrder.getOrderId());
+        System.out.println("Trade: "+ sellOrder.getOrderId() +" "+quantity+" "+sellOrder.getPrice()+ " "+buyOrder.getOrderId());
+
+        updateLastTradeInfo(buyOrder, sellOrder, quantity);
+
+        return trade;
+    }
+
+    private void removeOrderFromStockBook(Order buyOrder, Order sellOrder){
+
         if(stockOrderBooks.get(buyOrder.getStockCode())!=null){
             if(sellOrder.getQuantity()==0){
                 stockOrderBooks.get(buyOrder.getStockCode()).getSellOrders().remove(sellOrder);
@@ -43,29 +60,57 @@ public class MatchingEngineServiceImpl implements MatchingEngineService {
                 stockOrderBooks.get(buyOrder.getStockCode()).getBuyOrders().remove(buyOrder);
             }
         }
+    }
 
-        Trade trade= new Trade(sellOrder.getOrderId(), quantity, sellOrder.getPrice(), buyOrder.getOrderId());
-        System.out.println("Trade: "+ sellOrder.getOrderId() +" "+quantity+" "+sellOrder.getPrice()+ " "+buyOrder.getOrderId());
+    private void updateLastTradeInfo(Order buyOrder, Order sellOrder, double quantity){
 
-        //update last trade info
         stockOrderBooks.get(buyOrder.getStockCode()).setLastTradedPrice(sellOrder.getPrice());
         stockOrderBooks.get(buyOrder.getStockCode()).setLastTradedQuantity(quantity);
         stockOrderBooks.get(buyOrder.getStockCode()).setLastTradedTime(new Timestamp(System.currentTimeMillis()));
 
-        return trade;
+    }
+
+    private boolean isStockHasSellOrdersPresent(String stockCode){
+
+        boolean sellOrdersPresent = false;
+
+        if(stockOrderBooks.containsKey(stockCode) && !stockOrderBooks.get(stockCode).getSellOrders().isEmpty()){
+            sellOrdersPresent = true;
+        }
+        return sellOrdersPresent;
+    }
+
+    private boolean isStockHasBuyOrdersPresent(String stockCode){
+
+        boolean buyOrdersPresent = false;
+
+        if(stockOrderBooks.containsKey(stockCode) && !stockOrderBooks.get(stockCode).getBuyOrders().isEmpty()){
+            buyOrdersPresent = true;
+        }
+        return buyOrdersPresent;
+    }
+
+    private PriorityBlockingQueue<Order> getStockSellOrders(String stockCode){
+        return stockOrderBooks.get(stockCode).getSellOrders();
+    }
+
+    private PriorityBlockingQueue<Order> getStockBuyOrders(String stockCode){
+        return stockOrderBooks.get(stockCode).getBuyOrders();
     }
 
     @Override
     public List<Trade> matchBuyStock(Order buyOrder) {
         System.out.println("Processing buy buyOrder: "+buyOrder);
 
+        String stockCode = buyOrder.getStockCode();
         List<Trade> trades=new ArrayList<>();
-        //stock has sell orders present
-        if(stockOrderBooks.containsKey(buyOrder.getStockCode()) && !stockOrderBooks.get(buyOrder.getStockCode()).getSellOrders().isEmpty()){
-            while(stockOrderBooks.get(buyOrder.getStockCode()).getSellOrders().peek().getPrice()<= buyOrder.getPrice() && buyOrder.getQuantity() >0){
-                Order sellOrder = stockOrderBooks.get(buyOrder.getStockCode()).getSellOrders().peek();
+
+        if(isStockHasSellOrdersPresent(stockCode)){
+            Order sellOrder = getStockSellOrders(stockCode).peek();
+            while(isStockHasSellOrdersPresent(stockCode) && sellOrder.getPrice()<= buyOrder.getPrice() && buyOrder.getQuantity() >0){
                 Trade trade = createTradeAndUpdateOrderBook(buyOrder,sellOrder);
                 trades.add(trade);
+                sellOrder = getStockSellOrders(stockCode).peek();
             }
         }
 
@@ -83,13 +128,15 @@ public class MatchingEngineServiceImpl implements MatchingEngineService {
 
     @Override
     public List<Trade> matchSellStock(Order sellOrder) {
-        System.out.println("Processing sell sellOrder: "+sellOrder);
+        System.out.println("Processing sellOrder: "+sellOrder);
         List<Trade> trades= new ArrayList<>();
 
-        //stock has buy orders present
-        if(stockOrderBooks.containsKey(sellOrder.getStockCode()) && !stockOrderBooks.get(sellOrder.getStockCode()).getBuyOrders().isEmpty()){
-            while(stockOrderBooks.get(sellOrder.getStockCode()).getBuyOrders().peek().getPrice() >= sellOrder.getPrice() && sellOrder.getQuantity() > 0) {
-                Order buyOrder = stockOrderBooks.get(sellOrder.getStockCode()).getBuyOrders().peek();
+        String stockCode = sellOrder.getStockCode();
+
+        if(isStockHasBuyOrdersPresent(stockCode)){
+            Order buyOrder = getStockBuyOrders(stockCode).peek();
+            while(isStockHasBuyOrdersPresent(stockCode) && buyOrder.getPrice() >= sellOrder.getPrice() && sellOrder.getQuantity() > 0) {
+                buyOrder = getStockBuyOrders(stockCode).peek();
                 Trade trade= createTradeAndUpdateOrderBook(buyOrder,sellOrder);
                 trades.add(trade);
             }

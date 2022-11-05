@@ -6,11 +6,11 @@ package com.intuit.stock.exchange.model;
 public class Trade {
 
     private int sellOrderId;
-    private float quantity;
-    private float sellPrice;
+    private double quantity;
+    private double sellPrice;
     private int buyOrderId;
 
-    public Trade(int sellOrderId, float quantity, float sellPrice, int buyOrderId) {
+    public Trade(int sellOrderId, double quantity, double sellPrice, int buyOrderId) {
         this.sellOrderId = sellOrderId;
         this.quantity = quantity;
         this.sellPrice = sellPrice;

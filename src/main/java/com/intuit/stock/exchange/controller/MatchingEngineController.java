@@ -1,14 +1,14 @@
 package com.intuit.stock.exchange.controller;
 
-import com.intuit.stock.exchange.model.OrderType;
 import com.intuit.stock.exchange.model.Order;
 import com.intuit.stock.exchange.model.Trade;
-import com.intuit.stock.exchange.service.impl.MatchingEngineServiceImpl;
+import com.intuit.stock.exchange.model.TradeType;
+import com.intuit.stock.exchange.service.IMatchingStrategy;
+import com.intuit.stock.exchange.service.impl.LimitOrderMatchingStrategy;
+import com.intuit.stock.exchange.service.impl.MatchingStrategyFactory;
+import com.intuit.stock.exchange.utils.MatchingEngineUtils;
 
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -16,12 +16,15 @@ import java.util.List;
  */
 public class MatchingEngineController {
 
-    private static final String FORMAT="HH:mm";
-    private static final List<Trade> result = new ArrayList<>();
+    private final List<Trade> result;
+    private final MatchingStrategyFactory  matchingStrategyFactory;
+
+    public MatchingEngineController() {
+        result = new ArrayList<>();
+        matchingStrategyFactory = new MatchingStrategyFactory(); //TODO: dependency Injectopn
+    }
 
     public void matchStocksOrders(List<String> stockOrders){
-
-        MatchingEngineServiceImpl stockExchangeService = new MatchingEngineServiceImpl();
 
         long startTime = System.currentTimeMillis();
 
@@ -29,22 +32,17 @@ public class MatchingEngineController {
 
                 try{
                     String[] str= order.split(" ");
-                    SimpleDateFormat dateFormat = new SimpleDateFormat(FORMAT);
-                    Date parsedDate = dateFormat.parse(str[1]);
-                    Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
-                    OrderType orderType = OrderType.valueOf(str[3]);
-                    //Can call a validation helper class to validate all the inputs
-                    Order stockOrder = new Order(Integer.parseInt(str[0]), timestamp, str[2], orderType, Float.parseFloat(str[4]), Float.parseFloat(str[5]));
-                    List<Trade> trades = null;
-                    if(orderType.equals(OrderType.buy)){
-                        trades= stockExchangeService.matchBuyStock(stockOrder);
+                    Order stockOrder = MatchingEngineUtils.validateAndCreateOrder(str);
+
+                    if(stockOrder==null){
+                        System.out.println("Failed to process order: "+ order);
+                        continue;
                     }
-                    else if(orderType.equals(OrderType.sell)){
-                        trades= stockExchangeService.matchSellStock(stockOrder);
-                    }
-                    System.out.println("trades:"+ trades);
+
+                    List<Trade> trades = getTrades(stockOrder);
                     if(trades!=null && !trades.isEmpty())
                         result.addAll(trades);
+
                 }
                 catch (Exception e){
                     System.out.println("Exception occurred for order: "+ order +" Exception: "+e);
@@ -53,13 +51,21 @@ public class MatchingEngineController {
             }
         long endTime = System.currentTimeMillis();
         System.out.println("Total time taken to process all orders= "+ String.valueOf(endTime-startTime));
-        printResult();
+        MatchingEngineUtils.printResult(result);
     }
 
-    private static void printResult(){
-        System.out.println("Final Output:");
-        for(Trade trade: result){
-            System.out.println(trade.toString());
+    private List<Trade> getTrades(Order stockOrder){
+
+        List<Trade> trades = null;
+        IMatchingStrategy matchingStrategy = matchingStrategyFactory.findStrategy(stockOrder.getOrderType());
+
+        if(stockOrder.getTradeType().equals(TradeType.buy)){
+            trades= matchingStrategy.matchBuyStock(stockOrder);
         }
+        else if(stockOrder.getTradeType().equals(TradeType.sell)){
+            trades= matchingStrategy.matchSellStock(stockOrder);
+        }
+        System.out.println("trades:"+ trades);
+        return trades;
     }
 }

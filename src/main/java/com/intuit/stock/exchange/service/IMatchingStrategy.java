@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * @author monikas
  */
-public interface MatchingEngineService {
+public interface IMatchingStrategy {
 
     public List<Trade> matchBuyStock(Order order);
     public List<Trade> matchSellStock(Order order);

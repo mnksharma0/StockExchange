@@ -12,8 +12,8 @@ public class OrderBook {
     private PriorityBlockingQueue<Order> buyOrders;
     private PriorityBlockingQueue<Order> sellOrders;
     private Timestamp lastTradedTime;
-    private float lastTradedQuantity;
-    private float lastTradedPrice;
+    private double lastTradedQuantity;
+    private double lastTradedPrice;
 
     public OrderBook(){
         buyOrders = new PriorityBlockingQueue<Order>(1, new Comparator<Order>() {
@@ -69,19 +69,19 @@ public class OrderBook {
         this.lastTradedTime = lastTradedTime;
     }
 
-    public float getLastTradedQuantity() {
+    public double getLastTradedQuantity() {
         return lastTradedQuantity;
     }
 
-    public void setLastTradedQuantity(float lastTradedQuantity) {
+    public void setLastTradedQuantity(double lastTradedQuantity) {
         this.lastTradedQuantity = lastTradedQuantity;
     }
 
-    public float getLastTradedPrice() {
+    public double getLastTradedPrice() {
         return lastTradedPrice;
     }
 
-    public void setLastTradedPrice(float lastTradedPrice) {
+    public void setLastTradedPrice(double lastTradedPrice) {
         this.lastTradedPrice = lastTradedPrice;
     }
 
