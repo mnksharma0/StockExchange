@@ -100,7 +100,7 @@ public class LimitOrderMatchingStrategy implements IMatchingStrategy {
     }
 
     private boolean isOrderExpired(Order order){
-        return order.getExpiryTime().after(new Timestamp(System.currentTimeMillis()));
+        return order.getExpiryTime().before(new Timestamp(System.currentTimeMillis()));
     }
 
     private void handleExpiredOrder(Order order){

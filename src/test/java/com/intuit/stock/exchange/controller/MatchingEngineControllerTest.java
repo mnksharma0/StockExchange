@@ -151,7 +151,7 @@ class MatchingEngineControllerTest {
     void TestExpiredOrders() throws Exception {
 
         List<String> ordersList= new ArrayList();
-        ordersList.add("1 09:45 BAC sell 100 236.45");
+        ordersList.add("1 09:45 BAC sell 100 236.45 2022-11-01-12:50");
         ordersList.add("2 09:46 BAC sell 90 237.45");
         ordersList.add("3 09:47 BAC buy 80 238.10");
 
@@ -159,7 +159,7 @@ class MatchingEngineControllerTest {
 
         assertTrue(result != null);
         assertTrue(result.size() == 1);
-        assertEquals(result.get(0).toString(), new Trade(1, 80, 237.45, 3).toString());
+        assertEquals(result.get(0).toString(), new Trade(2, 80, 237.45, 3).toString());
     }
 
 

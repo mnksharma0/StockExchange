@@ -2,11 +2,9 @@ package com.intuit.stock.exchange.utils;
 
 import com.intuit.stock.exchange.model.*;
 
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -17,7 +15,7 @@ public class MatchingEngineUtils {
 
     public static Order validateAndCreateOrder(String[] str) throws Exception {
 
-        if(str.length!=6){
+        if(str.length < 6){
             System.out.println("Input not in correct format. str: " + str.toString());
             return null;
         }
@@ -26,7 +24,7 @@ public class MatchingEngineUtils {
         try{
             int orderId= Integer.parseInt(str[0]);
 
-            SimpleDateFormat dateFormat = new SimpleDateFormat(Constants.FORMAT);
+            SimpleDateFormat dateFormat = new SimpleDateFormat(Constants.TIMEFORMAT);
             Date parsedDate = dateFormat.parse(str[1]);
             Timestamp timestamp = new java.sql.Timestamp(parsedDate.getTime());
 
@@ -37,10 +35,18 @@ public class MatchingEngineUtils {
             Double price = Double.valueOf(str[5]);
             OrderStatus status = OrderStatus.IN_PROCESS;
 
-
+            SimpleDateFormat expiryDateFormat = new SimpleDateFormat(Constants.DATEPATTERN);
             Timestamp expiryTime = new Timestamp(System.currentTimeMillis());
-            expiryTime.setHours(15);
-            expiryTime.setMinutes(30);
+            if( str.length == 7 && str[6] != null)
+            {
+                parsedDate = expiryDateFormat.parse(str[6]);
+                expiryTime = new java.sql.Timestamp(parsedDate.getTime());
+            }
+            else {
+                expiryTime.setHours(23);
+                expiryTime.setMinutes(59);
+                expiryTime.setSeconds(59);
+            }
 
             stockOrder  = new Order(orderId, timestamp, stockCode, orderType, tradeType, quantity, price, status, expiryTime);
 
