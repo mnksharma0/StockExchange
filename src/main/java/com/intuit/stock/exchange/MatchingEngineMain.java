@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class MatchingEngineMain {
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws Exception {
 
         String inputString1 = "1 09:45 BAC sell 100 240.10";
         String inputString2 = "2 09:45 BAC sell 90 237.45";

@@ -1,11 +1,12 @@
 package com.intuit.stock.exchange.model;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
  * @author monikas
  */
-public class Order {
+public class Order implements Serializable {
 
     private int orderId;
     private Timestamp time;

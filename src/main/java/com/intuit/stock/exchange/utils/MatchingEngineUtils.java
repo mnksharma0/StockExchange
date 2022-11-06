@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class MatchingEngineUtils {
 
-    public static Order validateAndCreateOrder(String[] str){
+    public static Order validateAndCreateOrder(String[] str) throws Exception {
 
         if(str.length!=6){
             System.out.println("Input not in correct format. str: " + str.toString());
@@ -46,8 +46,10 @@ public class MatchingEngineUtils {
 
         } catch (ParseException e) {
             System.out.println("Time is in incorrect format. value= "+str[1]);
+            throw e;
         } catch (Exception e) {
             System.out.println("Input Validation failed with exception: "+e);
+            throw e;
         }
 
         return stockOrder;

@@ -1,5 +1,6 @@
 package com.intuit.stock.exchange.model;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -7,7 +8,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 /**
  * @author monikas
  */
-public class OrderBook {
+public class OrderBook implements Serializable {
 
     private PriorityBlockingQueue<Order> buyOrders;
     private PriorityBlockingQueue<Order> sellOrders;

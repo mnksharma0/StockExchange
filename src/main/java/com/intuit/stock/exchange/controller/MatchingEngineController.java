@@ -24,7 +24,7 @@ public class MatchingEngineController {
         matchingStrategyFactory = new MatchingStrategyFactory(); //TODO: dependency Injectopn
     }
 
-    public void matchStocksOrders(List<String> stockOrders){
+    public List<Trade> matchStocksOrders(List<String> stockOrders) throws Exception {
 
         long startTime = System.currentTimeMillis();
 
@@ -47,11 +47,13 @@ public class MatchingEngineController {
                 catch (Exception e){
                     System.out.println("Exception occurred for order: "+ order +" Exception: "+e);
                     e.printStackTrace();
+                    throw e;
                 }
             }
         long endTime = System.currentTimeMillis();
         System.out.println("Total time taken to process all orders= "+ String.valueOf(endTime-startTime));
         MatchingEngineUtils.printResult(result);
+        return result;
     }
 
     private List<Trade> getTrades(Order stockOrder){
