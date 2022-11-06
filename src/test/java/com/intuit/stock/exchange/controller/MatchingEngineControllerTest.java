@@ -161,10 +161,4 @@ class MatchingEngineControllerTest {
         assertTrue(result.size() == 1);
         assertEquals(result.get(0).toString(), new Trade(2, 80, 237.45, 3).toString());
     }
-
-
-    //TODO: sellorder fulfulling old buy order in stock book
-    // buyorder fulfilled by old sell order
-    // expired orders
-
 }
